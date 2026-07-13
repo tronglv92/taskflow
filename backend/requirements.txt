@@ -1,0 +1,28 @@
+# TaskFlow Backend Dependencies
+# Platform Engineering Bootcamp Reference Application
+
+# Core Framework
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.5.3
+pydantic-settings==2.1.0
+
+# Database (Week 4+)
+sqlalchemy==2.0.25
+psycopg2-binary==2.9.9
+alembic==1.13.1
+
+# Authentication & Security (Week 4+)
+python-jose[cryptography]>=3.4.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.27
+
+# Development & Testing
+pytest==7.4.4
+pytest-asyncio==0.23.3
+httpx==0.26.0
+ruff==0.1.14
+black==24.3.0
+
+# Utilities
+python-dotenv==1.2.2

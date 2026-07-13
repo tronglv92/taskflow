@@ -1,0 +1,42 @@
+{
+  "name": "taskflow-frontend",
+  "version": "0.1.0",
+  "description": "TaskFlow Frontend - Platform Engineering Bootcamp Reference Application",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore",
+    "format": "prettier --write src/"
+  },
+  "dependencies": {
+    "vue": "^3.4.15",
+    "vue-router": "^4.2.5",
+    "pinia": "^2.1.7",
+    "axios": "^1.6.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.3",
+    "vite": "^5.0.11",
+    "vitest": "^1.2.1",
+    "@vue/test-utils": "^2.4.3",
+    "eslint": "^9.39.2",
+    "eslint-plugin-vue": "^9.20.1",
+    "prettier": "^3.2.4",
+    "autoprefixer": "^10.4.17",
+    "postcss": "^8.4.33",
+    "tailwindcss": "^3.4.1"
+  },
+  "keywords": [
+    "platform-engineering",
+    "devops",
+    "bootcamp",
+    "vue",
+    "fastapi",
+    "task-management"
+  ],
+  "author": "TeKanAid Academy",
+  "license": "MIT"
+}

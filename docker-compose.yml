@@ -1,0 +1,80 @@
+# TaskFlow Docker Compose Configuration
+# Platform Engineering Bootcamp Reference Application
+# Week 2: Students set up their local development environment
+
+version: '3.8'
+
+services:
+  # Backend API Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: taskflow-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - DEBUG=true
+      # Week 4+: Database connection
+      # - DATABASE_URL=postgresql://taskflow:taskflow@db:5432/taskflow
+    volumes:
+      # Mount code for hot-reload during development
+      - ./backend/app:/app:ro
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - taskflow-network
+
+  # Frontend Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: build  # Use build stage for development
+    container_name: taskflow-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      # Mount code for hot-reload during development
+      - ./frontend/src:/app/src:ro
+      - ./frontend/public:/app/public:ro
+    command: npm run dev -- --host 0.0.0.0
+    depends_on:
+      - backend
+    networks:
+      - taskflow-network
+
+  # PostgreSQL Database (Week 4+)
+  # Uncomment when students reach Week 4
+  # db:
+  #   image: postgres:15-alpine
+  #   container_name: taskflow-db
+  #   ports:
+  #     - "5432:5432"
+  #   environment:
+  #     - POSTGRES_USER=taskflow
+  #     - POSTGRES_PASSWORD=taskflow
+  #     - POSTGRES_DB=taskflow
+  #   volumes:
+  #     - postgres-data:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U taskflow"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #   networks:
+  #     - taskflow-network
+
+networks:
+  taskflow-network:
+    driver: bridge
+
+# Week 4+: Add volumes for database persistence
+# volumes:
+#   postgres-data:

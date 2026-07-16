@@ -1,0 +1,91 @@
+# TaskFlow PostgreSQL StatefulSet
+#
+# Provisioned ahead of any app code that actually uses it. The backend has
+# no models/, services/, or ORM wiring yet (see backend/app/main.py's
+# `"database": {"status": "not_configured"}` in /api/v1/status) - this is
+# real infrastructure for future weeks to build on, matching the same
+# postgres:15-alpine service already defined (commented out) in
+# docker-compose.yml.
+#
+# POSTGRES_PASSWORD is a placeholder matching docker-compose.yml's local dev
+# credentials ("taskflow"). Same rule as backend-secret.yaml: never use this
+# value outside a local lab environment.
+apiVersion: v1
+kind: Service
+metadata:
+  name: taskflow-postgres
+  labels:
+    app: taskflow-postgres
+spec:
+  clusterIP: None
+  selector:
+    app: taskflow-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: taskflow-postgres
+  labels:
+    app: taskflow-postgres
+spec:
+  serviceName: taskflow-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: taskflow-postgres
+  template:
+    metadata:
+      labels:
+        app: taskflow-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: "taskflow"
+            - name: POSTGRES_PASSWORD
+              value: "taskflow"
+            - name: POSTGRES_DB
+              value: "taskflow"
+            - name: PGDATA
+              value: "/var/lib/postgresql/data/pgdata"
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "taskflow"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "taskflow"]
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 5
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 2Gi

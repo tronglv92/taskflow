@@ -1,0 +1,15 @@
+# TaskFlow Frontend Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: taskflow-frontend
+  labels:
+    app: taskflow-frontend
+spec:
+  type: ClusterIP
+  selector:
+    app: taskflow-frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80

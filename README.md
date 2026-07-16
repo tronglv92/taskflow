@@ -87,9 +87,10 @@ TaskFlow/
 │   ├── package.json        # Node dependencies
 │   └── Dockerfile          # Frontend container image
 │
-├── infrastructure/         # Infrastructure as Code
+├── kubernetes/             # K8s manifests (real, see kubernetes/README.md)
+│
+├── infrastructure/         # Infrastructure as Code (future weeks)
 │   ├── terraform/          # Terraform configurations
-│   ├── kubernetes/         # K8s manifests
 │   ├── crossplane/         # Crossplane compositions
 │   └── helm/               # Helm charts
 │

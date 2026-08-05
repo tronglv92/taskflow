@@ -3,7 +3,7 @@
 # Week 6: Students learn multi-stage Docker builds
 
 # Build stage
-FROM node:18-alpine as build
+FROM node:22-alpine as build
 
 WORKDIR /app
 

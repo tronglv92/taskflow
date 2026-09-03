@@ -7,10 +7,14 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-# Make the app package importable (app/ holds database.py, models.py).
-sys.path.insert(
-    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "app")
-)
+# Make the app importable (it holds database.py, models.py). In the source tree
+# that is ../app; in the container image the app/ contents are flattened onto the
+# working directory, so fall back to the parent directory itself.
+_here = os.path.dirname(os.path.abspath(__file__))
+for _candidate in (os.path.join(os.path.dirname(_here), "app"), os.path.dirname(_here)):
+    if os.path.isfile(os.path.join(_candidate, "database.py")):
+        sys.path.insert(0, _candidate)
+        break
 
 from database import Base  # noqa: E402
 import models  # noqa: E402,F401  (registers tables on Base.metadata)

@@ -27,8 +27,10 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copy application code and database migrations
 COPY ./app /app
+COPY ./alembic /app/alembic
+COPY ./alembic.ini /app/alembic.ini
 
 # Create non-root user for security
 RUN useradd -m -u 1000 taskflow && \
@@ -42,5 +44,7 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()" || exit 1
 
-# Run the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Apply database migrations, then start the application. The migration step is
+# best-effort: if the database is unreachable the server still starts (the app
+# also creates any missing tables at startup when using SQLite).
+CMD ["sh", "-c", "timeout 15 alembic upgrade head || echo 'alembic: skipped (database unavailable)'; exec uvicorn main:app --host 0.0.0.0 --port 8000"]

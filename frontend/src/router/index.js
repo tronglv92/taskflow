@@ -1,12 +1,12 @@
 /**
- * Vue Router Configuration
- * Platform Engineering Bootcamp Reference Application
+ * Vue Router configuration.
  *
- * Week 3: Students learn about frontend routing
- * Later weeks: Add authentication guards and protected routes
+ * Routes with meta.requiresAuth are protected by the global beforeEach guard,
+ * which checks the Pinia auth store and redirects to /login when needed.
  */
 
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import Home from '../views/Home.vue'
 
 const routes = [
@@ -14,38 +14,32 @@ const routes = [
     path: '/',
     name: 'Home',
     component: Home,
-    meta: {
-      title: 'Home - TaskFlow'
-    }
+    meta: { title: 'Home - TaskFlow' }
   },
   {
     path: '/tasks',
     name: 'Tasks',
     component: () => import('../views/Tasks.vue'),
-    meta: {
-      title: 'Tasks - TaskFlow',
-      // Week 4+: requiresAuth: true
-    }
+    meta: { title: 'Tasks - TaskFlow', requiresAuth: true }
   },
   {
     path: '/about',
     name: 'About',
     component: () => import('../views/About.vue'),
-    meta: {
-      title: 'About - TaskFlow'
-    }
+    meta: { title: 'About - TaskFlow' }
   },
-  // Week 4+: Authentication routes
-  // {
-  //   path: '/login',
-  //   name: 'Login',
-  //   component: () => import('../views/Login.vue')
-  // },
-  // {
-  //   path: '/register',
-  //   name: 'Register',
-  //   component: () => import('../views/Register.vue')
-  // }
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('../views/Login.vue'),
+    meta: { title: 'Log in - TaskFlow' }
+  },
+  {
+    path: '/register',
+    name: 'Register',
+    component: () => import('../views/Register.vue'),
+    meta: { title: 'Register - TaskFlow' }
+  }
 ]
 
 const router = createRouter({
@@ -53,18 +47,13 @@ const router = createRouter({
   routes
 })
 
-// Set page title from route meta
-router.beforeEach((to, from, next) => {
+router.beforeEach((to) => {
   document.title = to.meta.title || 'TaskFlow'
 
-  // Week 4+: Add authentication guard
-  // if (to.meta.requiresAuth && !isAuthenticated()) {
-  //   next('/login')
-  // } else {
-  //   next()
-  // }
-
-  next()
+  const auth = useAuthStore()
+  if (to.meta.requiresAuth && !auth.isAuthenticated) {
+    return { name: 'Login', query: { redirect: to.fullPath } }
+  }
 })
 
 export default router

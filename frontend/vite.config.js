@@ -13,7 +13,7 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
-    // Week 3: Proxy API requests to backend
+    // Dev-only: forward /api calls to the backend so the browser sees one origin
     proxy: {
       '/api': {
         target: 'http://localhost:8000',

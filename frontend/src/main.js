@@ -14,7 +14,7 @@ import './assets/main.css'
 // Create Vue application
 const app = createApp(App)
 
-// Create Pinia store (Week 3: Students learn state management)
+// Pinia holds global state (task list, auth session)
 const pinia = createPinia()
 
 // Install plugins

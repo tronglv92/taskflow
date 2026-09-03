@@ -2,13 +2,41 @@
 TaskFlow Backend API
 Platform Engineering Bootcamp Reference Application
 
-This is the main entry point for the TaskFlow FastAPI backend.
-Students will build and expand this application throughout the bootcamp.
+Entry point for the TaskFlow FastAPI backend. The app object is served with
+``uvicorn app.main:app`` (local/dev) or ``uvicorn main:app`` (container, where
+``app/`` is copied to the working directory). The sys.path line below makes the
+root-anchored imports (``from routes import ...``) resolve in both layouts.
 """
+
+import logging
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from contextlib import asynccontextmanager
+from datetime import datetime
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from datetime import datetime
+from sqlalchemy import text
+
+from core.config import settings
+from database import engine, init_db
+from routes import auth, projects, tasks
+
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    """Best-effort table creation for local/SQLite runs. Never fatal."""
+    try:
+        init_db()
+    except Exception as exc:  # pragma: no cover - depends on runtime DB
+        logger.warning("Skipping table creation (database unavailable): %s", exc)
+    yield
+
 
 # Create FastAPI application
 app = FastAPI(
@@ -17,30 +45,27 @@ app = FastAPI(
     version="0.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # Configure CORS for frontend communication
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",  # Vue.js dev server
-        "http://localhost:3000",  # Alternative dev port
-        "http://localhost:8080",  # Alternative dev port
-    ],
+    allow_origins=settings.backend_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# API routers
+app.include_router(auth.router, prefix="/api")
+app.include_router(tasks.router, prefix="/api/v1")
+app.include_router(projects.router, prefix="/api")
+
 
 @app.get("/")
 async def root():
-    """
-    Root endpoint - Welcome message
-
-    This endpoint provides basic information about the TaskFlow API.
-    Students will expand this throughout the bootcamp.
-    """
+    """Root endpoint - welcome message and basic API information."""
     return {
         "message": "Welcome to TaskFlow API",
         "version": "0.1.0",
@@ -60,9 +85,6 @@ async def health_check():
     - Kubernetes liveness probes
     - Load balancers
     - Monitoring systems
-
-    Students will enhance this in later weeks with database connectivity checks,
-    external service health, and more detailed metrics.
     """
     return {
         "status": "healthy",
@@ -77,34 +99,37 @@ async def api_status():
     """
     API status endpoint
 
-    Provides detailed information about the API's current state.
-    This will be expanded in later weeks to include:
-    - Database connection status
-    - Cache status
-    - External service dependencies
-    - Performance metrics
+    Reports the API's current state, including a best-effort database check.
+    The database check is wrapped so this endpoint never returns 500 when the
+    database is down.
     """
+    database_connected = False
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        database_connected = True
+    except Exception:
+        database_connected = False
+
     return {
         "api_version": "v1",
         "status": "operational",
         "timestamp": datetime.utcnow().isoformat(),
-        "environment": "development",
+        "environment": settings.environment,
         "features": {
-            "tasks": "pending",  # Week 3+
-            "authentication": "pending",  # Week 4+
-            "users": "pending",  # Week 4+
+            "tasks": "available",
+            "authentication": "available",
+            "users": "available",
+            "projects": "available",
         },
         "database": {
-            "status": "not_configured",  # Week 4+
+            "status": "connected" if database_connected else "unavailable",
             "type": "postgresql"
+            if settings.database_url.startswith("postgres")
+            else "sqlite",
         }
     }
 
-
-# Week 3+: Tasks API endpoints will be added here
-# Week 4+: Authentication endpoints will be added here
-# Week 5+: User management endpoints will be added here
-# Week 7+: Advanced features and integrations
 
 if __name__ == "__main__":
     import uvicorn

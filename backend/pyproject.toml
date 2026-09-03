@@ -1,0 +1,6 @@
+[tool.pytest.ini_options]
+# "." makes `from app.main import app` resolve; "app" makes the root-anchored
+# imports inside app/ (e.g. `from routes import tasks`) resolve. Together they
+# let the tests run from any working directory, not just backend/.
+pythonpath = ["app", "."]
+testpaths = ["tests"]

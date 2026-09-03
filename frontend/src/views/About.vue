@@ -104,9 +104,8 @@
           </h3>
 
           <p class="text-gray-700">
-            <strong>Version:</strong> 0.1.0 (Initial Scaffold)<br>
-            <strong>Status:</strong> Development<br>
-            <strong>Last Updated:</strong> Week 2 of Bootcamp
+            <strong>Version:</strong> 0.6.0 (Backend + frontend reading reference)<br>
+            <strong>Status:</strong> Development
           </p>
 
           <div class="mt-6 bg-blue-100 border-l-4 border-blue-500 p-4">

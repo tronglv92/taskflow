@@ -2,15 +2,18 @@
  * Axios API client.
  *
  * baseURL comes from VITE_API_URL (baked in at build time) and falls back to
- * http://localhost:8000 for local development. A request interceptor attaches
- * the auth token; a response interceptor clears it and redirects to /login on
- * a 401.
+ * the relative ``/api`` path in development. Vite proxies that path to the
+ * FastAPI server, so the browser talks only to the Vite origin instead of its
+ * own localhost. A request interceptor attaches the auth token; a response
+ * interceptor clears it and redirects to /login on a 401.
  */
 
 import axios from 'axios'
 
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
+  // A relative fallback is essential when Vite is opened through the Academy
+  // service tab: ``localhost`` there means the learner's browser, not the VM.
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   headers: {
     'Content-Type': 'application/json'
   }

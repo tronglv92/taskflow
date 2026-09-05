@@ -118,18 +118,19 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import axios from 'axios'
+import apiClient from '@/api/client'
 
 const apiStatus = ref(null)
 const error = ref(null)
 
-// Fetch API status on component mount
+// Use the shared client so this request follows Vite's /api development proxy
+// and receives the same auth/error behavior as every other frontend request.
 onMounted(async () => {
   try {
-    const response = await axios.get('http://localhost:8000/api/v1/status')
+    const response = await apiClient.get('/api/v1/status')
     apiStatus.value = response.data
   } catch (err) {
-    error.value = 'Unable to connect to backend API. Make sure the backend is running on http://localhost:8000'
+    error.value = 'Unable to connect to the backend API. Confirm the Backend Server terminal is still running.'
     console.error('API Error:', err)
   }
 })

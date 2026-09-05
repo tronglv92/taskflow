@@ -13,6 +13,10 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    // Academy exposes the dev server through a per-learner subdomain. Allow
+    // that trusted parent domain so Vite's host-header protection accepts the
+    // TaskFlow App service tab without opening the server to arbitrary hosts.
+    allowedHosts: ['.academy.tekanaid.com'],
     // Dev-only: forward /api calls to the backend so the browser sees one origin
     proxy: {
       '/api': {

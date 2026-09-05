@@ -14,6 +14,8 @@ import schemas
 
 
 def get_tasks(db: Session, skip: int = 0, limit: int = 100):
+    # offset/limit implement simple pagination while keeping HTTP query parsing
+    # in the route layer.
     return db.query(models.Task).offset(skip).limit(limit).all()
 
 
@@ -36,6 +38,8 @@ def get_task(db: Session, task_id: int) -> Optional[models.Task]:
 def create_task(
     db: Session, task: schemas.TaskCreate, user_id: Optional[int] = None
 ) -> models.Task:
+    # SQLAlchemy stages the object, writes it at commit, then refreshes it so
+    # database-generated fields such as id and timestamps are available to send.
     db_task = models.Task(**task.model_dump(), user_id=user_id)
     db.add(db_task)
     db.commit()
@@ -49,6 +53,8 @@ def update_task(
     db_task = get_task(db, task_id)
     if db_task is None:
         return None
+    # A partial request must change only supplied fields. Without exclude_unset,
+    # Pydantic defaults/None values could erase data the client did not mention.
     for key, value in task_update.model_dump(exclude_unset=True).items():
         setattr(db_task, key, value)
     db.commit()
@@ -60,6 +66,7 @@ def delete_task(db: Session, task_id: int) -> bool:
     db_task = get_task(db, task_id)
     if db_task is None:
         return False
+    # The ORM cascade rules in models.py clean up dependent rows as needed.
     db.delete(db_task)
     db.commit()
     return True

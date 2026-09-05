@@ -12,6 +12,9 @@ import logging
 import os
 import sys
 
+# Make sibling packages (``core``, ``routes``, and ``services``) importable in
+# both supported layouts. Locally this file is ``app/main.py``; in the Docker
+# image the *contents* of ``app/`` are copied into the working directory.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from contextlib import asynccontextmanager
@@ -30,7 +33,12 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    """Best-effort table creation for local/SQLite runs. Never fatal."""
+    """Run startup work before FastAPI accepts requests.
+
+    ``yield`` marks the boundary between startup and shutdown. Table creation
+    is intentionally best-effort: ``/health`` must still answer if a database
+    is unavailable, otherwise an outage would make the liveness probe fail too.
+    """
     try:
         init_db()
     except Exception as exc:  # pragma: no cover - depends on runtime DB
@@ -48,7 +56,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Configure CORS for frontend communication
+# Browsers treat the Vue dev server (port 5173) and this API (port 8000) as
+# different origins. CORS explicitly permits the configured frontend origins
+# to call this API; command-line clients are not subject to this browser rule.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.backend_cors_origins,
@@ -57,7 +67,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# API routers
+# A router owns a related group of endpoints. Its own prefix combines with the
+# prefix here: e.g. the auth router's ``/auth`` becomes ``/api/auth``.
 app.include_router(auth.router, prefix="/api")
 app.include_router(tasks.router, prefix="/api/v1")
 app.include_router(projects.router, prefix="/api")
@@ -65,7 +76,7 @@ app.include_router(projects.router, prefix="/api")
 
 @app.get("/")
 async def root():
-    """Root endpoint - welcome message and basic API information."""
+    """Return lightweight discovery information without touching the database."""
     return {
         "message": "Welcome to TaskFlow API",
         "version": "0.1.0",
@@ -86,6 +97,8 @@ async def health_check():
     - Load balancers
     - Monitoring systems
     """
+    # Keep this response intentionally cheap and dependency-free. Docker and
+    # Kubernetes can call it repeatedly even while a downstream service fails.
     return {
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
@@ -103,6 +116,8 @@ async def api_status():
     The database check is wrapped so this endpoint never returns 500 when the
     database is down.
     """
+    # This is a deeper diagnostic than ``/health``: a real ``SELECT 1`` forces
+    # the lazy SQLAlchemy pool to obtain a connection without reading app data.
     database_connected = False
     try:
         with engine.connect() as conn:

@@ -21,6 +21,9 @@ async def list_tasks(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
+    # Dependency resolution happens before this function body. The reference
+    # app currently authenticates all callers but does not yet scope this list
+    # to ``current_user``; that simplification is intentional for the lab.
     if completed is not None:
         return task_service.get_tasks_by_status(db, completed, skip, limit)
     return task_service.get_tasks(db, skip, limit)
@@ -34,6 +37,8 @@ async def create_task(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
+    # The authenticated identity, rather than the request schema, determines
+    # task ownership and prevents a caller from assigning a task to someone else.
     return task_service.create_task(db, task, user_id=current_user.id)
 
 
@@ -43,6 +48,8 @@ async def get_task(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
+    # The service returns None for an absent row; routes translate that domain
+    # result into the HTTP-specific 404 response.
     task = task_service.get_task(db, task_id)
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
@@ -56,6 +63,8 @@ async def update_task(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
+    # ``exclude_unset`` in the service means a body with only is_completed does
+    # not overwrite title, description, or priority with their default values.
     task = task_service.update_task(db, task_id, task_update)
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task {task_id} not found")

@@ -17,6 +17,8 @@ async def list_projects(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
+    # ``current_user`` makes this route protected. As with tasks, this small
+    # reference app does not yet filter the collection by the requesting user.
     return db.query(models.Project).all()
 
 
@@ -30,6 +32,8 @@ async def create_project(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
+    # ``model_dump`` converts validated Pydantic input into constructor kwargs;
+    # the server appends ownership instead of accepting it from the client.
     db_project = models.Project(**project.model_dump(), user_id=current_user.id)
     db.add(db_project)
     db.commit()

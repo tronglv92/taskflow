@@ -10,8 +10,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    # ``env_file`` makes a developer's uncommitted .env convenient locally;
+    # real environment variables still override it in CI and containers.
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+    # Application metadata can be changed per environment without editing code.
     app_name: str = "TaskFlow"
     app_version: str = "0.1.0"
     environment: str = "development"
@@ -20,7 +23,8 @@ class Settings(BaseSettings):
     # Database. Falls back to SQLite so the app runs with zero config.
     database_url: str = "sqlite:///./taskflow.db"
 
-    # Auth / JWT
+    # Auth / JWT. The default key is deliberately unsafe and is only suitable
+    # for this reference app's local development mode.
     secret_key: str = "dev-insecure-secret-change-me"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
@@ -33,4 +37,6 @@ class Settings(BaseSettings):
     ]
 
 
+# Import this singleton wherever configuration is needed. Creating it once
+# ensures every module reads the same resolved settings values.
 settings = Settings()

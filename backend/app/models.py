@@ -15,6 +15,7 @@ from database import Base
 
 
 class User(Base):
+    # ``__tablename__`` maps this Python class to the physical ``users`` table.
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -24,6 +25,8 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
+    # ORM-level cascade complements the ForeignKey cascade below. Deleting a
+    # User through SQLAlchemy also removes owned rows instead of orphaning them.
     tasks = relationship(
         "Task", back_populates="owner", cascade="all, delete-orphan"
     )
@@ -41,6 +44,7 @@ class Project(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
+    # Database-level cascade also protects integrity if SQL bypasses the ORM.
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
 
     owner = relationship("User", back_populates="projects")
@@ -61,8 +65,14 @@ class Task(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
+    # A task belongs to its creator. The API supplies this value from the JWT,
+    # rather than trusting a client to choose an arbitrary user_id in JSON.
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
+    # project_id remains optional so the introductory app can create tasks
+    # before a user has created any projects.
     project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"))
 
+    # ``back_populates`` makes each relationship navigable in either direction:
+    # ``task.owner`` and ``user.tasks`` describe the same association.
     owner = relationship("User", back_populates="tasks")
     project = relationship("Project", back_populates="tasks")

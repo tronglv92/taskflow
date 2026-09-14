@@ -12,6 +12,7 @@ kubernetes/
 ├── backend-configmap.yaml      # non-secret backend env vars
 ├── backend-secret.yaml         # DATABASE_URL / SECRET_KEY (placeholder values)
 ├── postgres-statefulset.yaml   # postgres:15-alpine StatefulSet + headless Service
+├── redis-statefulset.yaml      # redis:7-alpine StatefulSet + headless Service
 ├── frontend-deployment.yaml    # taskflow-frontend Deployment (2 replicas)
 └── frontend-service.yaml       # ClusterIP Service, port 80
 ```
@@ -23,10 +24,10 @@ the app as it exists today. Images are built locally (`taskflow-backend:1.0.0`,
 `taskflow-frontend:1.0.0`) and loaded into Minikube (`imagePullPolicy: Never`)
 - there's no registry push step yet.
 
-The Postgres StatefulSet is provisioned ahead of any code that uses it, same
-as the `db` service in `docker-compose.yml`. The backend has no database
-client code yet (`/api/v1/status` reports `"database": {"status":
-"not_configured"}`) - that's explicit future-week work.
+The PostgreSQL StatefulSet is TaskFlow's source of truth. Redis is an internal
+cache for task-list reads; it is not a database replacement. The backend falls
+back to PostgreSQL if Redis is unavailable, and `/api/v1/status` reports its
+cache state.
 
 `backend-secret.yaml` ships with obvious placeholder values. Every
 environment (a student's Minikube, staging, prod) is expected to generate

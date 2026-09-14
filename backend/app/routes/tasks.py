@@ -9,6 +9,7 @@ import models
 import schemas
 from api.deps import get_current_user, get_db
 from services import task_service
+from services import redis_cache
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -24,14 +25,22 @@ async def list_tasks(
     # Dependency resolution happens before this function body. The reference
     # app currently authenticates all callers but does not yet scope this list
     # to ``current_user``; that simplification is intentional for the lab.
+    cache_key = f"taskflow:tasks:{completed}:{skip}:{limit}"
+    cached = redis_cache.get_json(cache_key)
+    if cached is not None:
+        return cached
     if completed is not None:
-        return task_service.get_tasks_by_status(db, completed, skip, limit)
-    return task_service.get_tasks(db, skip, limit)
+        tasks = task_service.get_tasks_by_status(db, completed, skip, limit)
+    else:
+        tasks = task_service.get_tasks(db, skip, limit)
+    payload = [
+        schemas.TaskRead.model_validate(task).model_dump(mode="json") for task in tasks
+    ]
+    redis_cache.set_json(cache_key, payload)
+    return payload
 
 
-@router.post(
-    "/", response_model=schemas.TaskRead, status_code=status.HTTP_201_CREATED
-)
+@router.post("/", response_model=schemas.TaskRead, status_code=status.HTTP_201_CREATED)
 async def create_task(
     task: schemas.TaskCreate,
     db: Session = Depends(get_db),
@@ -39,7 +48,9 @@ async def create_task(
 ):
     # The authenticated identity, rather than the request schema, determines
     # task ownership and prevents a caller from assigning a task to someone else.
-    return task_service.create_task(db, task, user_id=current_user.id)
+    created = task_service.create_task(db, task, user_id=current_user.id)
+    redis_cache.invalidate_pattern("taskflow:tasks:*")
+    return created
 
 
 @router.get("/{task_id}", response_model=schemas.TaskRead)
@@ -68,6 +79,7 @@ async def update_task(
     task = task_service.update_task(db, task_id, task_update)
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+    redis_cache.invalidate_pattern("taskflow:tasks:*")
     return task
 
 
@@ -79,3 +91,4 @@ async def delete_task(
 ):
     if not task_service.delete_task(db, task_id):
         raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+    redis_cache.invalidate_pattern("taskflow:tasks:*")

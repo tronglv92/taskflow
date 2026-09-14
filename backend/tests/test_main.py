@@ -64,13 +64,9 @@ def test_cors_headers():
 
 
 def _register_and_login(client, email="alex@example.com", password="password123"):
-    reg = client.post(
-        "/api/auth/register", json={"email": email, "password": password}
-    )
+    reg = client.post("/api/auth/register", json={"email": email, "password": password})
     assert reg.status_code == 201, reg.text
-    tok = client.post(
-        "/api/auth/token", data={"username": email, "password": password}
-    )
+    tok = client.post("/api/auth/token", data={"username": email, "password": password})
     assert tok.status_code == 200, tok.text
     return tok.json()["access_token"]
 
@@ -118,3 +114,27 @@ def test_task_not_found_404(client):
 def test_tasks_require_authentication(client):
     response = client.get("/api/v1/tasks/")
     assert response.status_code == 401
+
+
+def test_task_mutations_invalidate_redis_list_cache(client, monkeypatch):
+    """Redis accelerates reads only; writes always invalidate cached lists."""
+    from services import redis_cache
+
+    invalidations = []
+    monkeypatch.setattr(
+        redis_cache, "invalidate_pattern", lambda pattern: invalidations.append(pattern)
+    )
+    token = _register_and_login(client, email="cache@example.com")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    created = client.post("/api/v1/tasks/", json={"title": "Cache me"}, headers=headers)
+    assert created.status_code == 201
+    assert invalidations == ["taskflow:tasks:*"]
+
+    updated = client.put(
+        f"/api/v1/tasks/{created.json()['id']}",
+        json={"is_completed": True},
+        headers=headers,
+    )
+    assert updated.status_code == 200
+    assert invalidations == ["taskflow:tasks:*", "taskflow:tasks:*"]

@@ -27,6 +27,7 @@ from sqlalchemy import text
 from core.config import settings
 from database import engine, init_db
 from routes import auth, projects, tasks
+from services import redis_cache
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +83,7 @@ async def root():
         "version": "0.1.0",
         "docs": "/docs",
         "status": "development",
-        "bootcamp": "Platform Engineering Bootcamp - TeKanAid Academy"
+        "bootcamp": "Platform Engineering Bootcamp - TeKanAid Academy",
     }
 
 
@@ -103,7 +104,7 @@ async def health_check():
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
         "service": "taskflow-backend",
-        "version": "0.1.0"
+        "version": "0.1.0",
     }
 
 
@@ -136,22 +137,21 @@ async def api_status():
             "authentication": "available",
             "users": "available",
             "projects": "available",
+            "task_list_cache": "redis" if settings.redis_url else "disabled",
         },
         "database": {
             "status": "connected" if database_connected else "unavailable",
-            "type": "postgresql"
-            if settings.database_url.startswith("postgres")
-            else "sqlite",
-        }
+            "type": (
+                "postgresql"
+                if settings.database_url.startswith("postgres")
+                else "sqlite"
+            ),
+        },
+        "redis": {"status": redis_cache.status()},
     }
 
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-        log_level="info"
-    )
+
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True, log_level="info")

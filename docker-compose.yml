@@ -16,8 +16,8 @@ services:
     environment:
       - ENVIRONMENT=development
       - DEBUG=true
-      # Week 4+: Database connection
-      # - DATABASE_URL=postgresql://taskflow:taskflow@db:5432/taskflow
+      - DATABASE_URL=postgresql://taskflow:taskflow@db:5432/taskflow
+      - REDIS_URL=redis://redis:6379/0
     volumes:
       # Mount code for hot-reload during development
       - ./backend/app:/app:ro
@@ -28,6 +28,11 @@ services:
       timeout: 3s
       retries: 3
       start_period: 5s
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - taskflow-network
 
@@ -50,31 +55,41 @@ services:
     networks:
       - taskflow-network
 
-  # PostgreSQL Database (Week 4+)
-  # Uncomment when students reach Week 4
-  # db:
-  #   image: postgres:15-alpine
-  #   container_name: taskflow-db
-  #   ports:
-  #     - "5432:5432"
-  #   environment:
-  #     - POSTGRES_USER=taskflow
-  #     - POSTGRES_PASSWORD=taskflow
-  #     - POSTGRES_DB=taskflow
-  #   volumes:
-  #     - postgres-data:/var/lib/postgresql/data
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U taskflow"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
-  #   networks:
-  #     - taskflow-network
+  db:
+    image: postgres:15-alpine
+    container_name: taskflow-db
+    environment:
+      - POSTGRES_USER=taskflow
+      - POSTGRES_PASSWORD=taskflow
+      - POSTGRES_DB=taskflow
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U taskflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - taskflow-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: taskflow-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - taskflow-network
 
 networks:
   taskflow-network:
     driver: bridge
 
-# Week 4+: Add volumes for database persistence
-# volumes:
-#   postgres-data:
+volumes:
+  postgres-data:
+  redis-data:

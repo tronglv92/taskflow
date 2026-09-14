@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     # Database. Falls back to SQLite so the app runs with zero config.
     database_url: str = "sqlite:///./taskflow.db"
 
+    # Redis is optional. When unset or unavailable, cache operations fail open
+    # and the API reads directly from PostgreSQL/SQLite instead.
+    redis_url: str | None = None
+    redis_cache_ttl_seconds: int = 60
+
     # Auth / JWT. The default key is deliberately unsafe and is only suitable
     # for this reference app's local development mode.
     secret_key: str = "dev-insecure-secret-change-me"

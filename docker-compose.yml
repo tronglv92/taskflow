@@ -45,6 +45,10 @@ services:
     container_name: taskflow-frontend
     ports:
       - "5173:5173"
+    environment:
+      # "localhost" inside this container would mean itself, not the separate
+      # backend container - point Vite's dev proxy at the real service name.
+      - VITE_API_PROXY_TARGET=http://backend:8000
     volumes:
       # Mount code for hot-reload during development
       - ./frontend/src:/app/src:ro
